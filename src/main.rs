@@ -32,54 +32,30 @@ async fn main_with_error(ntype: i32) -> Result<(), anyhow::Error> {
         .await
         .map_err(|e| anyhow!("Connect error:{}", e))?;
     println!("created stream");
-    let mut interval = time::interval(Duration::from_secs(5));
+    let mut interval = time::interval(Duration::from_secs(2));
     loop {
         interval.tick().await;
-        let con_command: Vec<u8> = match ntype {
-            1 => vec![
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x01, 0x03, 0x00, 0x00, 0x00, 0x02,
-            ],
-            _ => vec![
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x11, 0x03, 0x00, 0x60, 0x00, 0x01,
-            ],
-        };
-        stream
-            .write_all(&con_command)
-            .await
-            .map_err(|e| anyhow!("write all error,error is {}", e))?;
-        stream
-            .flush()
-            .await
-            .map_err(|e| anyhow!("flush error,error is {}", e))?;
-        let mut res_byte_head = [0u8; 16];
-        let read_res = stream
-            .read_exact(&mut res_byte_head)
-            .await
-            .map_err(|e| anyhow!("read_exact error,error is {}", e))?;
-
-        let body_len = res_byte_head[7] as usize;
-        let mut res_body = vec![0u8; body_len];
-        // parse()
-
-        println!("resbody: {:?}", res_body);
-
-        let mut n_weight: u16 = 0;
-        let mut n_temp: u16 = 0;
-        let mut n_gain: u16 = 256;
-
-        if ntype == 1 {
-            n_weight = (res_byte_head[9] as u16) * n_gain + res_byte_head[10] as u16;
-            n_temp = (res_byte_head[11] as u16) * n_gain + res_byte_head[12] as u16;
-        } else {
-            let currnet = (((res_byte_head[9] as u16) * n_gain + res_byte_head[10] as u16) / 1000
-                - 4) as f64
-                * 4000.0
-                / 16.0;
-            n_weight = currnet as u16;
-            n_temp = 0;
-        }
-
-        println!("wrote to stream; success={}", n_weight);
+        let write_command: Vec<u8> = vec![
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00b, 0x02, 0x10, 0x00, 0x21, 0x00, 0x02, 0x04, 0x00,
+            0x00, 0x00, 0x00,
+        ];
+        let read_command: Vec<u8> = vec![
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x02, 0x03, 0x00, 0x05, 0x00, 0x04,
+        ];
+        let write_btn_enable: Vec<u8> = vec![
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x02, 0x06, 0x00, 0x17, 0x00, 0x01,
+        ];
+        // 发送数据
+        stream.write_all(&read_command).await?;
+        let _ = stream.flush().await;
+        //fmt.Println(writeLen)
+        let mut res_byte_head = vec![0; 32];
+        let _ = stream.read(&mut res_byte_head).await?;
+        // let weight = (res_byte_head[9] as u16 * 256 + res_byte_head[10] as u16) as i32;
+        // let ok = res_byte_head[12] as i32;
+        // let n_fill_al_finished = res_byte_head[14] as i32;
+        // let n_press_button = (res_byte_head[16] as u16) as i32;
+        println!("res_byte_head is {:?}", res_byte_head);
     }
     Ok(())
 }
