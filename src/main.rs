@@ -2,10 +2,9 @@ use std::net::SocketAddr;
 
 use anyhow::anyhow;
 use bytes::Bytes;
+use clap::Parser;
 use http_body_util::{combinators::BoxBody, BodyExt, Empty, Full};
-use hyper::server::conn::http1;
-use hyper::service::service_fn;
-use hyper::{body::Body, Method, Request, Response, StatusCode};
+
 use hyper_util::rt::TokioIo;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
@@ -14,7 +13,12 @@ use tokio::net::TcpStream;
 use tokio::time;
 use tokio::time::Duration;
 use tokio::time::Interval;
-
+/// Simple program to greet a person
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    endpoint: String,
+}
 #[tokio::main]
 async fn main() {
     if let Err(e) = main_with_error(1).await {
@@ -22,11 +26,13 @@ async fn main() {
     }
 }
 async fn main_with_error(ntype: i32) -> Result<(), anyhow::Error> {
-    let mut stream = TcpStream::connect("127.0.0.1:6142")
+    let args = Args::parse();
+    let endpoint = args.endpoint;
+    let mut stream = TcpStream::connect(endpoint)
         .await
-        .map_err(|e| anyhow!(e))?;
+        .map_err(|e| anyhow!("Connect error:{}", e))?;
     println!("created stream");
-    let mut interval = time::interval(Duration::from_secs(2));
+    let mut interval = time::interval(Duration::from_secs(5));
     loop {
         interval.tick().await;
         let con_command: Vec<u8> = match ntype {
@@ -37,10 +43,19 @@ async fn main_with_error(ntype: i32) -> Result<(), anyhow::Error> {
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x11, 0x03, 0x00, 0x60, 0x00, 0x01,
             ],
         };
-        stream.write_all(&con_command).await?;
-        stream.flush().await?;
+        stream
+            .write_all(&con_command)
+            .await
+            .map_err(|e| anyhow!("write all error,error is {}", e))?;
+        stream
+            .flush()
+            .await
+            .map_err(|e| anyhow!("flush error,error is {}", e))?;
         let mut res_byte_head = [0u8; 16];
-        let read_res = stream.read_exact(&mut res_byte_head).await?;
+        let read_res = stream
+            .read_exact(&mut res_byte_head)
+            .await
+            .map_err(|e| anyhow!("read_exact error,error is {}", e))?;
 
         let body_len = res_byte_head[7] as usize;
         let mut res_body = vec![0u8; body_len];
