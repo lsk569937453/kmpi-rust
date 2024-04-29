@@ -4,7 +4,11 @@ use anyhow::anyhow;
 use bytes::Bytes;
 use clap::Parser;
 use http_body_util::{combinators::BoxBody, BodyExt, Empty, Full};
-
+mod common;
+mod dao;
+mod service;
+mod vojo;
+use crate::service::vessl_service::get_route;
 use hyper_util::rt::TokioIo;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
@@ -13,19 +17,99 @@ use tokio::net::TcpStream;
 use tokio::time;
 use tokio::time::Duration;
 use tokio::time::Interval;
+use tracing_appender::non_blocking::{NonBlockingBuilder, WorkerGuard};
+use tracing_appender::rolling;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::Layer;
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
     endpoint: String,
 }
+use axum::{
+    http::StatusCode,
+    routing::{get, post},
+    Json, Router,
+};
+use serde::{Deserialize, Serialize};
+fn setup_logger() -> Result<WorkerGuard, anyhow::Error> {
+    let app_file = rolling::daily("./logs", "access.log");
+    let (non_blocking_appender, guard) = NonBlockingBuilder::default()
+        .buffered_lines_limit(10)
+        .finish(app_file);
+    let file_layer = tracing_subscriber::fmt::Layer::new()
+        .with_target(true)
+        .with_ansi(false)
+        .with_writer(non_blocking_appender)
+        .with_filter(tracing_subscriber::filter::LevelFilter::INFO);
+
+    tracing_subscriber::registry()
+        .with(file_layer)
+        .with(tracing_subscriber::filter::LevelFilter::TRACE)
+        .init();
+    Ok(guard)
+}
 #[tokio::main]
 async fn main() {
-    if let Err(e) = main_with_error(1).await {
+    if let Err(e) = main_with_error().await {
         println!("{:?}", e);
     }
 }
-async fn main_with_error(ntype: i32) -> Result<(), anyhow::Error> {
+async fn main_with_error() -> Result<(), anyhow::Error> {
+    let _work_guard = setup_logger()?;
+    let db_pool = common::sql_connections::create_pool().await?;
+    // build our application with a route
+    let app = Router::new()
+        // `GET /` goes to `root`
+        .route("/", get(root))
+        // `POST /users` goes to `create_user`
+        .route("/users", post(create_user))
+        .route("/vessel", get(get_route))
+        .with_state(db_pool);
+
+    // run our app with hyper, listening globally on port 3000
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    axum::serve(listener, app).await.unwrap();
+    Ok(())
+}
+
+// basic handler that responds with a static string
+async fn root() -> &'static str {
+    "Hello, World!"
+}
+
+async fn create_user(
+    // this argument tells axum to parse the request body
+    // as JSON into a `CreateUser` type
+    Json(payload): Json<CreateUser>,
+) -> (StatusCode, Json<User>) {
+    // insert your application logic here
+    let user = User {
+        id: 1337,
+        username: payload.username,
+    };
+
+    // this will be converted into a JSON response
+    // with a status code of `201 Created`
+    (StatusCode::CREATED, Json(user))
+}
+
+// the input to our `create_user` handler
+#[derive(Deserialize)]
+struct CreateUser {
+    username: String,
+}
+
+// the output to our `create_user` handler
+#[derive(Serialize)]
+struct User {
+    id: u64,
+    username: String,
+}
+
+async fn another_with_error(ntype: i32) -> Result<(), anyhow::Error> {
     let args = Args::parse();
     let endpoint = args.endpoint;
     let mut stream = TcpStream::connect(endpoint)
