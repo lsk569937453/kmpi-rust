@@ -8,6 +8,8 @@ mod common;
 mod dao;
 mod service;
 mod vojo;
+#[macro_use]
+extern crate anyhow;
 use crate::service::vessl_service::get_route;
 use hyper_util::rt::TokioIo;
 use tokio::io::AsyncReadExt;
