@@ -5,7 +5,7 @@ use axum::response::IntoResponse;
 use axum::response::Response;
 use sqlx::{Pool, Sqlite};
 use std::convert::Infallible;
-pub async fn get_route(State(state): State<Pool<Sqlite>>) -> Result<Response, Infallible> {
+pub async fn get_vessl(State(state): State<Pool<Sqlite>>) -> Result<Response, Infallible> {
     match get_route_with_error(state).await {
         Ok(r) => Ok((
             axum::http::StatusCode::OK,

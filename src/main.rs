@@ -10,7 +10,8 @@ mod service;
 mod vojo;
 #[macro_use]
 extern crate anyhow;
-use crate::service::vessl_service::get_route;
+use crate::common::init::init_with_error;
+use crate::service::vessl_service::get_vessl;
 use hyper_util::rt::TokioIo;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
@@ -62,13 +63,14 @@ async fn main() {
 async fn main_with_error() -> Result<(), anyhow::Error> {
     let _work_guard = setup_logger()?;
     let db_pool = common::sql_connections::create_pool().await?;
+    init_with_error(db_pool.clone()).await?;
     // build our application with a route
     let app = Router::new()
         // `GET /` goes to `root`
         .route("/", get(root))
         // `POST /users` goes to `create_user`
         .route("/users", post(create_user))
-        .route("/vessel", get(get_route))
+        .route("/vessel", get(get_vessl))
         .with_state(db_pool);
 
     // run our app with hyper, listening globally on port 3000
