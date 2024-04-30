@@ -1,13 +1,13 @@
 use sqlx::{query_as, SqlitePool};
-pub const SUPER_ADMIN_AUTHORITY: i32 = 100;
-pub const ADMIN_AUTHORITY: i32 = 99;
-pub const UPDATE_AUTHORITY: i32 = 98;
-pub const SELECT_AUTHORITY: i32 = 97;
+pub const SUPER_ADMIN_AUTHORITY: u32 = 100;
+pub const ADMIN_AUTHORITY: u32 = 99;
+pub const UPDATE_AUTHORITY: u32 = 98;
+pub const SELECT_AUTHORITY: u32 = 97;
 #[derive(Debug, sqlx::FromRow)]
-struct User {
-    id: i32,
-    user_id: String,
-    user_account: String,
-    user_authority: String,
-    timestamp: String,
+pub struct User {
+    pub id: i32,
+    pub user_id: String,
+    pub user_account: String,
+    pub user_authority: u32,
+    pub timestamp: String,
 }
