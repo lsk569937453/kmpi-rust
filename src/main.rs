@@ -5,7 +5,7 @@ use bytes::Bytes;
 use clap::Parser;
 use http_body_util::{combinators::BoxBody, BodyExt, Empty, Full};
 use service::user_service::login;
-use service::user_service::{add_user, admin_login, delete_user};
+use service::user_service::{add_user, admin_login, delete_user, update_user};
 
 mod common;
 mod dao;
@@ -77,6 +77,7 @@ async fn main_with_error() -> Result<(), anyhow::Error> {
         .route("/api/login", post(login))
         .route("/api/deleteUser", post(delete_user))
         .route("/api/addUser", post(add_user))
+        .route("/api/updateUser", post(update_user))
         .with_state(db_pool);
 
     // run our app with hyper, listening globally on port 3000

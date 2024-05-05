@@ -6,3 +6,4 @@ pub mod delete_user_req;
 pub mod furnace;
 pub mod login_req;
 pub mod login_res;
+pub mod update_user_req;
