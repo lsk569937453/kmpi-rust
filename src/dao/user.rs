@@ -7,6 +7,7 @@ pub const SELECT_AUTHORITY: u32 = 97;
 pub struct User {
     pub id: i32,
     pub user_id: String,
+    pub user_password: String,
     pub user_account: String,
     pub user_authority: u32,
     pub timestamp: String,
