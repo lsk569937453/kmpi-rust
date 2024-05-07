@@ -1,4 +1,3 @@
-use sqlx::{query_as, SqlitePool};
 
 #[derive(Debug, sqlx::FromRow)]
 struct Vessel {

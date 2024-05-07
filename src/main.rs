@@ -1,9 +1,7 @@
-use std::net::SocketAddr;
 
 use anyhow::anyhow;
-use bytes::Bytes;
 use clap::Parser;
-use http_body_util::{combinators::BoxBody, BodyExt, Empty, Full};
+use http_body_util::{BodyExt};
 use service::user_service::login;
 use service::user_service::{add_user, admin_login, delete_user, update_user};
 
@@ -15,14 +13,11 @@ mod vojo;
 extern crate anyhow;
 use crate::common::init::init_with_error;
 use crate::service::vessl_service::get_vessl;
-use hyper_util::rt::TokioIo;
 use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
-use tokio::net::TcpListener;
 use tokio::net::TcpStream;
 use tokio::time;
 use tokio::time::Duration;
-use tokio::time::Interval;
 use tracing_appender::non_blocking::{NonBlockingBuilder, WorkerGuard};
 use tracing_appender::rolling;
 use tracing_subscriber::layer::SubscriberExt;
@@ -35,11 +30,9 @@ struct Args {
     endpoint: String,
 }
 use axum::{
-    http::StatusCode,
-    routing::{get, post},
-    Json, Router,
+    routing::{get, post}, Router,
 };
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize};
 fn setup_logger() -> Result<WorkerGuard, anyhow::Error> {
     let app_file = rolling::daily("./logs", "access.log");
     let (non_blocking_appender, guard) = NonBlockingBuilder::default()

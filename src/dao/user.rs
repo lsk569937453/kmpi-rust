@@ -1,4 +1,3 @@
-use sqlx::{query_as, SqlitePool};
 pub const SUPER_ADMIN_AUTHORITY: u32 = 100;
 pub const ADMIN_AUTHORITY: u32 = 99;
 pub const UPDATE_AUTHORITY: u32 = 98;
